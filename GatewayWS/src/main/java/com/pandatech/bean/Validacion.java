@@ -17,6 +17,24 @@ public class Validacion {
 
     public Validacion() {
     }
+
+    public void setClave(String clave) {
+        this.clave = clave;
+    }
+
+    public void setFecha(String fecha) {
+        this.fecha = fecha;
+    }
+
+    public void setInd_estado(String ind_estado) {
+        this.ind_estado = ind_estado;
+    }
+
+    public void setRespuesta_xml(String respuesta_xml) {
+        this.respuesta_xml = respuesta_xml;
+    }
+    
+    
     
     public String getClave() {
         return clave;

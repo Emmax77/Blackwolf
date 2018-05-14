@@ -52,6 +52,8 @@ public class Funciones extends HttpServlet {
     private static String XML_firmado = "";
     private String xmlFirmado;
     private String extractoClaveXml;
+    private String extractoTipoIdEmisor;
+    private String extractoIdEmisor;
     private String xmlBase64;
     Recepcion recepcion = new Recepcion();
     String archivoxml = null;
@@ -145,38 +147,57 @@ public class Funciones extends HttpServlet {
     }
 
     //@WebMethod(operationName = "firmaXml")
-    //public String firmaXml(@WebParam(name = "rutaCertificadop12") String rutaCertificadop12, @WebParam(name = "pin") String pin, @WebParam(name = "rutaXml") String rutaXml,@WebParam(name = "rutaGuardado") String rutaGuardado) {
+    //public String firmaXml(@WebParam(name = "rutaCertificadop12") String rutaCertificadop12, @WebParam(name = "pin") String pin, @WebParam(name = "rutaXml") String rutaXml, @WebParam(name = "rutaGuardado") String rutaGuardado) {
     public String firmaXml(String rutaCertificadop12, String pin, String rutaXml, String rutaGuardado) {
+
+        ClassLoader classLoader = getClass().getClassLoader();
         String res;
         Process cat;
         String content = "";
+        String rutaJarFirma = classLoader.getResource("firmar-xades.jar").getPath();
 
-        URL ruta = Logica.class.getProtectionDomain().getCodeSource().getLocation();
-        //System.out.println(ruta.toString().replace("com/pandatech/servlet/Logica.class", "archivos/firmar-xades.jar"));
-        String rutaJarFirma = ruta.toString().replace("com/pandatech/gatewayws/Facturacion.class", "archivos/firmar-xades.jar");
+        String[] rutaFirmador = rutaJarFirma.split("");
+        String[] rutaSave = rutaGuardado.split("");
+        String rutaCorrecta = "";
+
+        for (int i = 0; i < rutaFirmador.length; i++) {
+            if (i > 0) {
+                rutaCorrecta += rutaFirmador[i];
+            }
+        }
+        
+        String rutaFirma = rutaCorrecta.replace("%20", " ");
+
+        
+        
         try {
-            cat = Runtime.getRuntime().exec("java -jar" + rutaJarFirma + " " + rutaCertificadop12 + " " + pin + " " + rutaXml + " " + rutaGuardado);
+            cat = Runtime.getRuntime().exec("java -jar " + '"' + rutaFirma + '"' + " " + '"' + rutaCertificadop12 + '"' + " " + pin + " " + '"' + rutaXml + '"' + " " + '"' + rutaGuardado + '"');
+
+            Thread.sleep(3000);
 
             //Lee el xml firmado en la ruta indicada
             content = readFile(rutaGuardado, StandardCharsets.UTF_8);
 
-            //xmlFirmado = content.toString();
+            xmlFirmado = content.toString();
             //se debe encontrar el numero de clave en el xml
             extractoClaveXml = xmlFirmado.substring(xmlFirmado.indexOf("<Clave>") + 7, xmlFirmado.indexOf("</Clave>"));
+            extractoTipoIdEmisor = xmlFirmado.substring(xmlFirmado.indexOf("<Tipo>") + 6, xmlFirmado.indexOf("</Tipo>"));
+            extractoIdEmisor = xmlFirmado.substring(xmlFirmado.indexOf("<Numero>") + 8, xmlFirmado.indexOf("</Numero>"));
             //System.out.println("----------------------------------------------------------------------------------------------------------------------------- ");
             //System.out.println("--------------------------------------VALIDACION CANTIDAD CARACTERES EN CLAVE ----------------------------------------------- ");
             //valida la clave sustraid cuente con los 50 caracteres
+            //System.out.println(extractoIdEmisor + " " + extractoTipoIdEmisor);
             if (extractoClaveXml.length() < 50 || extractoClaveXml.length() > 50) {
                 res = "La cantidad de caracteres en la clave deben ser 50, favor volver a validarla";
             } else {
-                System.out.println("Correcto " + extractoClaveXml.length());
+                //System.out.println("Correcto " + extractoClaveXml.length());
                 //se convierte el resultado del xml firmado en base 64
                 Conversion codificar = new Conversion();
                 xmlBase64 = codificar.encode(content);
                 res = "Xml firmado exitosamente";
             }
         } catch (Exception e) {
-            System.out.println(e.toString());
+            //System.out.println(e.toString());
             res = e.toString();
         }
         //Realiza el proceso en tiempo de ejecucion java -jar sobre el compilado jar para realizar la firma del archivo xml
@@ -192,8 +213,9 @@ public class Funciones extends HttpServlet {
     }
 
     //@WebMethod(operationName = "creacionObjetoJson")
-    //public void creacionObjetoJson(@WebParam(name = "tipoIdEmisor")String tipoIdEmisor,@WebParam(name = "numeroIdEmisor") String numeroIdEmisor,@WebParam(name = "tipoIdReceptor") String tipoIdReceptor,@WebParam(name = "numeroIdReceptor") String numIdReceptor) {
-    public void creacionObjetoJson(String tipoIdEmisor, String numeroIdEmisor, String tipoIdReceptor, String numIdReceptor) {
+    //public void creacionObjetoJson(@WebParam(name = "tipoIdReceptor") String tipoIdReceptor, @WebParam(name = "numeroIdReceptor") String numIdReceptor) {
+    public void creacionObjetoJson(String tipoIdReceptor, String numIdReceptor) {
+
         //Se creó un objeto recepcion global
         //recepcion.setClave("506" + "010118" + "003101684401" + "0000000000000000013" + "1" + "999999999");
         recepcion.setClave(extractoClaveXml);
@@ -202,8 +224,8 @@ public class Funciones extends HttpServlet {
         recepcion.setFecha();
 
         IdentificacionEmisor emisor = new IdentificacionEmisor();
-        emisor.setTipoIdentificacion(tipoIdEmisor);
-        emisor.setNumeroIdentificacion(numeroIdEmisor);
+        emisor.setTipoIdentificacion(extractoTipoIdEmisor);
+        emisor.setNumeroIdentificacion(extractoIdEmisor);
 
         recepcion.setIdentificacionEmisor(emisor);
 
@@ -232,8 +254,7 @@ public class Funciones extends HttpServlet {
             Response post = solicitud.post(Entity.json(jsonString));
 
             //Response post = solicitud.post(Entity.json(recepcion));
-            System.out.println(post.getStatus());
-
+            //System.out.println(post.getStatus());
             switch (post.getStatus()) {
                 case 202:
                     // Éste código de retorno se da por recibido a la plataforma el documento. Posteriormente
@@ -261,12 +282,14 @@ public class Funciones extends HttpServlet {
         return res;
     }
 
-    //@WebMethod(operationName = "validacionEstado")
-    public String validacionEstado() {
+    //@WebMethod(operationName = "comprobanteXml")
+    //public String comprobanteXml(@WebParam(name = "clave") String clave) {
+    public String comprobanteXml(String clave) {
         String respuesta = "";
+        //System.out.println(clave);
         Client client = ClientBuilder.newClient();
         // En éste caso, clave corresponde a la clave del documento a validar
-        WebTarget target = client.target(URI + "recepcion/" + recepcion.getClave());
+        WebTarget target = client.target(URI + "recepcion/" + clave);
         Invocation.Builder request = target.request();
 
         // Se debe brindar un header "Authorization" con el valor del access token obtenido anteriormente.
@@ -275,8 +298,7 @@ public class Funciones extends HttpServlet {
         // Se envía un GET. para tomar el estado
         Response res = request.get();
 
-        System.out.println(res.getStatus());
-
+        //System.out.println(res.getStatus());
         switch (res.getStatus()) {
             case 200:
                 // Acá se debe procesar la respuesta para determinar si el atributo "ind-estado"
@@ -294,10 +316,16 @@ public class Funciones extends HttpServlet {
                     final Gson gson = new Gson();
                     final Validacion json = gson.fromJson(output, Validacion.class);
 
-                    Conversion decodificar = new Conversion();
-                    archivoxml = decodificar.decode(json.getRespuestaXml());
-                    //System.out.println(archivoxml);
-                    respuesta = archivoxml;
+                    if (json.getInd_estado().equals("error")) {
+                        respuesta = "Comprobante no generado, intente mas tarde";
+                    } else {
+                        Conversion decodificar = new Conversion();
+                        archivoxml = decodificar.decode(json.getRespuestaXml());
+                        //System.out.println(archivoxml);
+                        respuesta = archivoxml;
+                        //System.out.println(respuesta);
+                    }
+
                 } catch (Exception e) {
                     respuesta = e.toString();
                 }
@@ -306,7 +334,7 @@ public class Funciones extends HttpServlet {
             case 404:
                 // Se presenta si no se localiza la clave brindada
                 //LOG.log(Level.SEVERE, "La clave no esta registrada");
-                respuesta = "La clave no esta registrada";
+                respuesta = "Error, la clave no esta registrada";
                 break;
             case 400:
                 respuesta = res.getHeaderString("X-Error-Cause");
@@ -328,20 +356,27 @@ public class Funciones extends HttpServlet {
         return respuesta;
     }
 
-    //@WebMethod(operationName = "comprobanteXml")
-    public String comprobanteXml() {
+    public String guardarXml(String xml) {
         String respuesta = "";
         try {
-            String ruta = "C://temp/PT-" + recepcion.getClave() + ".xml";
+            String ruta = "C:/Users/Emmanuel Guzman/Desktop/archivos/sinFirmar/sinFirma.xml";
             File archivo = new File(ruta);
             BufferedWriter bw = new BufferedWriter(new FileWriter(archivo));
-            bw.write(archivoxml);
+            bw.write(xml);
             bw.close();
-            respuesta = "Comprobante Xml creado en la siguiente ruta: " + ruta;
+            respuesta = "Guardado";
         } catch (Exception e) {
             respuesta = e.toString();
         }
         return respuesta;
+    }
+
+    public String getExtractoClaveXml() {
+        return extractoClaveXml;
+    }
+
+    public void setExtractoClaveXml(String extractoClaveXml) {
+        this.extractoClaveXml = extractoClaveXml;
     }
 
     /**
