@@ -46,12 +46,12 @@ public class Facturacion {
      * This is a sample web service operation
      */
     @WebMethod(operationName = "facturar")
-    public String facturar(@WebParam(name = "usuario") String usuario, @WebParam(name = "password") String password, @WebParam(name = "rutaCertificadop12") String rutaCertificadop12, @WebParam(name = "pin") String pin, @WebParam(name = "rutaXml") String rutaXml, @WebParam(name = "rutaGuardado") String rutaGuardado, @WebParam(name = "tipoIdReceptor") String tipoIdReceptor, @WebParam(name = "numeroIdReceptor") String numIdReceptor) throws InterruptedException {
+    public String facturar(@WebParam(name = "usuario") String usuario, @WebParam(name = "password") String password, @WebParam(name = "rutaCertificadop12") String rutaCertificadop12, @WebParam(name = "pin") String pin, @WebParam(name = "rutaXml") String rutaXml, @WebParam(name = "tipoIdReceptor") String tipoIdReceptor, @WebParam(name = "numeroIdReceptor") String numIdReceptor) throws InterruptedException {
 
         RespuestaCliente respuesta = new RespuestaCliente();
         Funciones proceso = new Funciones();
         respuesta.setAutenticacion(proceso.autenticacion(usuario, password));
-        respuesta.setFirma(proceso.firmaXml(rutaCertificadop12, pin, rutaXml, rutaGuardado));
+        respuesta.setFirma(proceso.firmaXml(rutaCertificadop12, pin, rutaXml));
         proceso.creacionObjetoJson(tipoIdReceptor, numIdReceptor);
         respuesta.setFactura(proceso.enviarDocumento());
         Thread.sleep(3000);

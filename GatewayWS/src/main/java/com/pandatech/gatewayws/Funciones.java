@@ -148,17 +148,19 @@ public class Funciones extends HttpServlet {
 
     //@WebMethod(operationName = "firmaXml")
     //public String firmaXml(@WebParam(name = "rutaCertificadop12") String rutaCertificadop12, @WebParam(name = "pin") String pin, @WebParam(name = "rutaXml") String rutaXml, @WebParam(name = "rutaGuardado") String rutaGuardado) {
-    public String firmaXml(String rutaCertificadop12, String pin, String rutaXml, String rutaGuardado) {
+    public String firmaXml(String rutaCertificadop12, String pin, String rutaXml) {
 
         ClassLoader classLoader = getClass().getClassLoader();
         String res;
         Process cat;
         String content = "";
         String rutaJarFirma = classLoader.getResource("firmar-xades.jar").getPath();
+        String rutaGuardado = classLoader.getResource("firmado.xml").getPath();
 
         String[] rutaFirmador = rutaJarFirma.split("");
         String[] rutaSave = rutaGuardado.split("");
         String rutaCorrecta = "";
+        String guardado = ""; 
 
         for (int i = 0; i < rutaFirmador.length; i++) {
             if (i > 0) {
@@ -166,17 +168,23 @@ public class Funciones extends HttpServlet {
             }
         }
         
+        for (int i = 0; i < rutaSave.length; i++) {
+            if (i > 0) {
+                guardado += rutaSave[i];
+            }
+        }
+        
         String rutaFirma = rutaCorrecta.replace("%20", " ");
-
+        String rutaCorrectaGuardado = guardado.replace("%20", " ");
         
         
         try {
-            cat = Runtime.getRuntime().exec("java -jar " + '"' + rutaFirma + '"' + " " + '"' + rutaCertificadop12 + '"' + " " + pin + " " + '"' + rutaXml + '"' + " " + '"' + rutaGuardado + '"');
+            cat = Runtime.getRuntime().exec("java -jar " + '"' + rutaFirma + '"' + " " + '"' + rutaCertificadop12 + '"' + " " + pin + " " + '"' + rutaXml + '"' + " " + '"' + rutaCorrectaGuardado + '"');
 
             Thread.sleep(3000);
 
             //Lee el xml firmado en la ruta indicada
-            content = readFile(rutaGuardado, StandardCharsets.UTF_8);
+            content = readFile(rutaCorrectaGuardado, StandardCharsets.UTF_8);
 
             xmlFirmado = content.toString();
             //se debe encontrar el numero de clave en el xml
