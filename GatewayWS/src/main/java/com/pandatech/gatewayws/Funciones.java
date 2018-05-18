@@ -54,9 +54,11 @@ public class Funciones extends HttpServlet {
     private String extractoClaveXml;
     private String extractoTipoIdEmisor;
     private String extractoIdEmisor;
+    private String extractoTipoIdReceptor;
+    private String extractoIdReceptor;
     private String xmlBase64;
     Recepcion recepcion = new Recepcion();
-    String archivoxml = null;
+    private String archivoxml = null;
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -149,9 +151,10 @@ public class Funciones extends HttpServlet {
     //@WebMethod(operationName = "firmaXml")
     //public String firmaXml(@WebParam(name = "rutaCertificadop12") String rutaCertificadop12, @WebParam(name = "pin") String pin, @WebParam(name = "rutaXml") String rutaXml, @WebParam(name = "rutaGuardado") String rutaGuardado) {
     public String firmaXml(String rutaCertificadop12, String pin, String rutaXml) {
-
+        //System.out.println(rutaCertificadop12);
+        //System.out.println(rutaXml);
         ClassLoader classLoader = getClass().getClassLoader();
-        String res;
+        String res = "";
         Process cat;
         String content = "";
         String rutaJarFirma = classLoader.getResource("firmar-xades.jar").getPath();
@@ -160,24 +163,24 @@ public class Funciones extends HttpServlet {
         String[] rutaFirmador = rutaJarFirma.split("");
         String[] rutaSave = rutaGuardado.split("");
         String rutaCorrecta = "";
-        String guardado = ""; 
+        String guardado = "";
 
         for (int i = 0; i < rutaFirmador.length; i++) {
             if (i > 0) {
                 rutaCorrecta += rutaFirmador[i];
             }
         }
-        
+
         for (int i = 0; i < rutaSave.length; i++) {
             if (i > 0) {
                 guardado += rutaSave[i];
             }
         }
-        
+
         String rutaFirma = rutaCorrecta.replace("%20", " ");
         String rutaCorrectaGuardado = guardado.replace("%20", " ");
-        
-        
+        String pivote = "";
+
         try {
             cat = Runtime.getRuntime().exec("java -jar " + '"' + rutaFirma + '"' + " " + '"' + rutaCertificadop12 + '"' + " " + pin + " " + '"' + rutaXml + '"' + " " + '"' + rutaCorrectaGuardado + '"');
 
@@ -191,25 +194,30 @@ public class Funciones extends HttpServlet {
             extractoClaveXml = xmlFirmado.substring(xmlFirmado.indexOf("<Clave>") + 7, xmlFirmado.indexOf("</Clave>"));
             extractoTipoIdEmisor = xmlFirmado.substring(xmlFirmado.indexOf("<Tipo>") + 6, xmlFirmado.indexOf("</Tipo>"));
             extractoIdEmisor = xmlFirmado.substring(xmlFirmado.indexOf("<Numero>") + 8, xmlFirmado.indexOf("</Numero>"));
-            //System.out.println("----------------------------------------------------------------------------------------------------------------------------- ");
-            //System.out.println("--------------------------------------VALIDACION CANTIDAD CARACTERES EN CLAVE ----------------------------------------------- ");
-            //valida la clave sustraid cuente con los 50 caracteres
-            //System.out.println(extractoIdEmisor + " " + extractoTipoIdEmisor);
+
             if (extractoClaveXml.length() < 50 || extractoClaveXml.length() > 50) {
                 res = "La cantidad de caracteres en la clave deben ser 50, favor volver a validarla";
-            } else {
-                //System.out.println("Correcto " + extractoClaveXml.length());
-                //se convierte el resultado del xml firmado en base 64
-                Conversion codificar = new Conversion();
-                xmlBase64 = codificar.encode(content);
-                res = "Xml firmado exitosamente";
             }
         } catch (Exception e) {
             //System.out.println(e.toString());
-            res = e.toString();
+            res = "Error durante el proceso de firmado del xml, favor verifique la estructura de su factura";
         }
-        //Realiza el proceso en tiempo de ejecucion java -jar sobre el compilado jar para realizar la firma del archivo xml
-        //Se utiliza 4 parametros para ejecutar el jar de firmado
+
+        try {
+            pivote = xmlFirmado.substring(xmlFirmado.indexOf("<Receptor>") + 10, xmlFirmado.indexOf("</Receptor>"));
+            extractoTipoIdReceptor = pivote.substring(pivote.indexOf("<Tipo>") + 6, pivote.indexOf("</Tipo>"));
+            extractoIdReceptor = pivote.substring(pivote.indexOf("<Numero>") + 8, pivote.indexOf("</Numero>"));
+            //System.out.println(extractoTipoIdReceptor + " " + extractoIdReceptor);
+        } catch (Exception e) {
+            extractoTipoIdReceptor = "0";
+            extractoIdReceptor = "0";
+            //System.out.println(extractoTipoIdReceptor + " " + extractoIdReceptor);
+        }
+        if (res.equals("")) {
+            Conversion codificar = new Conversion();
+            xmlBase64 = codificar.encode(content);
+            res = "Xml firmado exitosamente";
+        }
 
         return res;
     }
@@ -222,7 +230,7 @@ public class Funciones extends HttpServlet {
 
     //@WebMethod(operationName = "creacionObjetoJson")
     //public void creacionObjetoJson(@WebParam(name = "tipoIdReceptor") String tipoIdReceptor, @WebParam(name = "numeroIdReceptor") String numIdReceptor) {
-    public void creacionObjetoJson(String tipoIdReceptor, String numIdReceptor) {
+    public void creacionObjetoJson() {
 
         //Se creó un objeto recepcion global
         //recepcion.setClave("506" + "010118" + "003101684401" + "0000000000000000013" + "1" + "999999999");
@@ -238,10 +246,10 @@ public class Funciones extends HttpServlet {
         recepcion.setIdentificacionEmisor(emisor);
 
         //El identificador del receptor es un valor opcional
-        if (tipoIdReceptor != "0" && numIdReceptor != "0") {
+        if (extractoTipoIdReceptor != "0" && extractoIdReceptor != "0") {
             IdentificacionReceptor receptor = new IdentificacionReceptor();
-            receptor.setTipoIdentificacion(tipoIdReceptor);
-            receptor.setNumeroIdentificacion(numIdReceptor);
+            receptor.setTipoIdentificacion(extractoTipoIdReceptor);
+            receptor.setNumeroIdentificacion(extractoIdReceptor);
             recepcion.setIdentificacionReceptor(receptor);
         }
 
@@ -260,6 +268,8 @@ public class Funciones extends HttpServlet {
             Gson gson = new Gson();
             String jsonString = gson.toJson(recepcion);
             Response post = solicitud.post(Entity.json(jsonString));
+
+            //System.out.println(jsonString);
 
             //Response post = solicitud.post(Entity.json(recepcion));
             //System.out.println(post.getStatus());
@@ -319,7 +329,7 @@ public class Funciones extends HttpServlet {
                 String output = res.readEntity(String.class).replace("ind-estado", "ind_estado").replace("respuesta-xml", "respuesta_xml");
 
                 //Genera el xml en consola de la respuesta de hacienda
-                //System.out.println(output);
+                System.out.println(output);
                 try {
                     final Gson gson = new Gson();
                     final Validacion json = gson.fromJson(output, Validacion.class);

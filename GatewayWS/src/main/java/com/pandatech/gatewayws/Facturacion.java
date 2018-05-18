@@ -46,13 +46,12 @@ public class Facturacion {
      * This is a sample web service operation
      */
     @WebMethod(operationName = "facturar")
-    public String facturar(@WebParam(name = "usuario") String usuario, @WebParam(name = "password") String password, @WebParam(name = "rutaCertificadop12") String rutaCertificadop12, @WebParam(name = "pin") String pin, @WebParam(name = "rutaXml") String rutaXml, @WebParam(name = "tipoIdReceptor") String tipoIdReceptor, @WebParam(name = "numeroIdReceptor") String numIdReceptor) throws InterruptedException {
-
+    public String facturar(@WebParam(name = "usuario") String usuario, @WebParam(name = "password") String password, @WebParam(name = "rutaCertificadop12") String rutaCertificadop12, @WebParam(name = "pin") String pin, @WebParam(name = "rutaXml") String rutaXml) throws InterruptedException {
         RespuestaCliente respuesta = new RespuestaCliente();
         Funciones proceso = new Funciones();
-        respuesta.setAutenticacion(proceso.autenticacion(usuario, password));
-        respuesta.setFirma(proceso.firmaXml(rutaCertificadop12, pin, rutaXml));
-        proceso.creacionObjetoJson(tipoIdReceptor, numIdReceptor);
+        respuesta.setAutenticacion(proceso.autenticacion(usuario.trim(), password.trim()));
+        respuesta.setFirma(proceso.firmaXml(rutaCertificadop12.trim(), pin.trim(), rutaXml.trim()));
+        proceso.creacionObjetoJson();
         respuesta.setFactura(proceso.enviarDocumento());
         Thread.sleep(3000);
         respuesta.setComprobanteXml(proceso.comprobanteXml(proceso.getExtractoClaveXml()));
@@ -68,8 +67,8 @@ public class Facturacion {
     public String comprobanteXml(@WebParam(name = "usuario") String usuario, @WebParam(name = "password") String password, @WebParam(name = "clave") String clave) {
         RespuestaCliente respuesta = new RespuestaCliente();
         Funciones proceso = new Funciones();
-        respuesta.setAutenticacion(proceso.autenticacion(usuario, password));
-        respuesta.setComprobanteXml(proceso.comprobanteXml(clave));
+        respuesta.setAutenticacion(proceso.autenticacion(usuario.trim(), password.trim()));
+        respuesta.setComprobanteXml(proceso.comprobanteXml(clave.trim()));
         proceso.desconexion();
         Gson gson = new Gson();
         String jsonString = gson.toJson(respuesta);
